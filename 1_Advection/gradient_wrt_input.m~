@@ -1,0 +1,31 @@
+function [J_y, J_z] = gradient_wrt_input(weights, x)
+%GRADIENT_WRT_INPUT Summary of this function goes here
+%   Detailed explanation goes here\
+%COMPUTE GRADIENTS OF NETWORK QUANTITIES Y and Z WRT INPUT X. 
+    %Refer to Appendix A advection problems, 
+    %We need the gradients of all the neuron weighted inputs and outputs,
+    %with respect to input x. 
+    %This is done by taking the partial derivatives of the network forward
+    %pass w.r.t. x_i, which defines a new neural net with the required
+    %gradients. 
+    
+%DEFINITIONS: 
+    %L: number of layers of neural network. 
+%INPUTS
+    %weights and biases characterize the neural network. 
+        %weights: cell array, size 1 to L where L is number of layers. The l'th
+            %entry contains matrix W(l) which connects the l'th layer to the l-1th
+    %x: M by 1 vector, input to neural net
+%OUTPUTS
+    %y: cell array with size L. y{l} is a vector, output of layer l. 
+    %z: cell array with size L. z{l} is a vector, weighted input to layer l.
+    %output: vector, y{L}, overall output of network. 
+%NOTES
+    %y is simply z with nonlinearity applied elementwise. Computed here to
+        %avoid dealing with inverses after.
+    %the biases are not present, because the partial derivative was taken
+    %(they're constants, and i
+outputArg1 = inputArg1;
+outputArg2 = inputArg2;
+end
+
