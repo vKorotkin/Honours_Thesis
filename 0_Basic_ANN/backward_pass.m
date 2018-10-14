@@ -1,4 +1,4 @@
-function [dC_dw, dC_db, grad_C] = backward_pass(inputs, outputs, weights, biases, gradient_fn)
+function [dC_dw, dC_db, grad_C] = backward_pass(weights, biases, y_l, z_l, grad_C)
 %cost function?
 %weight adjustment
 
@@ -10,11 +10,8 @@ function [dC_dw, dC_db, grad_C] = backward_pass(inputs, outputs, weights, biases
         dC_db{i}=zeros(size(biases{i}));
     end
 
-    [y_l, z_l]=forward_pass(inputs, weights, biases);
     
-     %for C=sum of 1/2 (y_net-y_out)^2 gradient is as below
-     %grad_C=sum(y_l{end}-outputs);
-     grad_C=gradient_fn(y_l{end}, outputs);
+
     
     %Get neuron errors
     for l=length(net_error) 

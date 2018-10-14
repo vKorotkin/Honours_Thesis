@@ -1,4 +1,4 @@
-function [y, z, output]=forward_pass(x, weights, biases)
+function [y, z, output]=BLK1_forward_pass(x, weights, biases)
 %FORWARD PASS OF NEURAL NETWORK
     %Go from start to end of neural network, computing the output. 
     %We also need the intermediate quantities i.e. inputs and outputs of

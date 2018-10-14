@@ -1,4 +1,4 @@
-function [dC_dw, dC_db, grad_C] = backward_pass(inputs, weights, biases, grad_C)
+function [dC_dw, dC_db, grad_C] = BLK2_backward_pass(inputs, weights, biases, grad_C)
 %cost function?
 %weight adjustment
 
@@ -23,15 +23,18 @@ function [dC_dw, dC_db, grad_C] = backward_pass(inputs, weights, biases, grad_C)
     l=-1;
     %computing the partial derivatives
     for l=length(net_error):-1:2
+        dC_dw{l}=dC_dw{l}+net_error{l}*y_l{l-1}';
+        dC_db{l}=dC_db{l}+net_error{l};
+        
         %fprintf('Layer %d', l);
-        for j = 1:length(biases{l})%current layer neuron indices
-            for k = 1:length(biases{l-1}) %previous layer neuron indices
-                %fprintf('Layer %d', l);
-                dC_dw{l}(j,k)=dC_dw{l}(j,k)+y_l{l-1}(k)*net_error{l}(j);
-                %dC_dw{2}
-                dC_db{l}(j)=dC_db{l}(j)+net_error{l}(j);
-            end
-        end
+%         for j = 1:length(biases{l})%current layer neuron indices
+%             for k = 1:length(biases{l-1}) %previous layer neuron indices
+%                 %fprintf('Layer %d', l);
+%                 dC_dw{l}(j,k)=dC_dw{l}(j,k)+y_l{l-1}(k)*net_error{l}(j);
+%                 %dC_dw{2}
+%                 dC_db{l}(j)=dC_db{l}(j)+net_error{l}(j);
+%             end
+%         end
         
     end
 

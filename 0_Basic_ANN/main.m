@@ -89,8 +89,10 @@ for iter=1:max_iter
         if iter>1
             prev_dC_dw=dC_dw; prev_dC_db=dC_db; 
         end
-        
-        [dC_dw, dC_db, grad_C_inc] = backward_pass(inputs(:,i), outputs(:,i), weights, biases, gradient_fn);
+       
+        [y_l, z_l]=forward_pass(inputs(:,i), weights, biases);
+        grad_C=sum(y_l{end}-outputs(:,i));
+        [dC_dw, dC_db, grad_C_inc] = backward_pass( weights, biases, y_l, z_l, grad_C);
         
         
         if iter==1
