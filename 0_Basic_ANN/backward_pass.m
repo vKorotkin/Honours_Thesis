@@ -45,8 +45,6 @@ function [dC_dw, dC_db, grad_C] = backward_pass(weights, biases, y_l, z_l, grad_
           sz=size(net_error{l});
           dC_dw{l}=(net_error{l}*y_l{l-1}')/sz(2);
           dC_db{l}=mean(net_error{l},2);
-%         dC_dw{l}=dC_dw{l}+net_error{l}*y_l{l-1}';
-%         dC_db{l}=dC_db{l}+net_error{l};
   
     end
 
