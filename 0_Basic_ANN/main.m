@@ -51,12 +51,12 @@ gradient_fn = @(y_L, y_act) sum(y_L-y_act);
 % calculate using all of them for each iteration, so we take a sample. 
 % Small value - gradient noisy, but we go fast. Too big value: gradient
 % less noisy, but expensive for each iteration.
-mini_batch_size=20;
+mini_batch_size=2;
 
 %maximum number iterations
 max_iter=10000;
 
-learning_rate=1; %gradient descent step size
+learning_rate=0.5; %gradient descent step size
 momentum_rate=0.1; %implement momentum. At each gradient descent step, we add the previous step with a multiplier to help with local minima
 inputs=[linspace(1,5,250)];%; linspace(1,5,10)];  %INPUTS
 outputs=[arrayfun(@(x) sin(x), inputs(1,:))];%; arrayfun(@(x) cos(x), inputs)]; %OUTPUTS
@@ -84,16 +84,22 @@ biases{1}=inputs(:,1); %as a placeholder, this is used for indexing,
 for iter=1:max_iter
     sample_idx=floor(rand(1,mini_batch_size)*length(inputs))+1; %pick a mini_batch
     
-    grad_C=zeros(size(biases{end})); %gradient of cost function w.r.t. net output
-    for i=1:sample_idx %go through minibatch, add up gradient
+    %variable that keeps track of gradient increments
+    grad_C_tracker=zeros(size(biases{end})); %gradient of cost function w.r.t. net output
+    
+    
+    %this runs slowly because we still loop through each point. which is
+    %annoying. modification to forward pass can help?
+   % for i=sample_idx %go through minibatch, add up gradient
+    i=sample_idx;
         if iter>1
             prev_dC_dw=dC_dw; prev_dC_db=dC_db; 
         end
        
         [y_l, z_l]=forward_pass(inputs(:,i), weights, biases);
         grad_C=sum(y_l{end}-outputs(:,i));
-        [dC_dw, dC_db, grad_C_inc] = backward_pass( weights, biases, y_l, z_l, grad_C);
-        
+        [dC_dw, dC_db] = backward_pass(weights, biases, y_l, z_l, grad_C);
+        grad_C_inc=grad_C; %
         
         if iter==1
             for j=2:length(weights)
@@ -107,18 +113,16 @@ for iter=1:max_iter
             end
             
         end
-        
-        
-        
-        
-        grad_C=grad_C+grad_C_inc;
-    end
+
+        grad_C_tracker=grad_C+grad_C_inc;
+  % end
     
     %grad_C=mean(grad_C); %take the mean 
     if abs(grad_C)<grad_tol
         break;
     end
     grad_C_arr(iter)=grad_C;
+    
     figure(1)
     [~,~,net_out]=forward_pass(inputs, weights, biases);
 
