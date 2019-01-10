@@ -1,4 +1,4 @@
-# PDE_NeuralNet_Thesis
+# Honours Thesis
 Investigation of neural networks application to solving PDEs - specifically dynamic ones e.g. vibration
 Main reference: 
 @article{berg2018unified,
