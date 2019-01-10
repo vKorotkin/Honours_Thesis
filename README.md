@@ -9,3 +9,13 @@ Main reference:
   publisher={Elsevier}
 }
 
+To install required packages in conda, use:
+
+Linux:
+
+conda-env create -n your_env_name -f req.txt
+source activate env_name
+
+Modify req.txt path as required. 
+
+
