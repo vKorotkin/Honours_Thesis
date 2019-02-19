@@ -13,7 +13,7 @@ from scipy.optimize import minimize
 from autograd.misc import flatten
 from autograd.wrap_util import wraps
 
-
+from scipy.optimize import basinhopping
 @primitive
 def relu(x):
     return np.maximum(0.,x);
@@ -70,7 +70,7 @@ def my_unflatten_optimizer(optimize):
         else:
             _callback = None
         result=optimize(_fun, _grad, _x0, _callback, *args, **kwargs)
-        return unflatten(result.x), result.success, result.fun
+        return unflatten(result.x), result.fun
         #return unflatten(optimize(_fun, _grad, _x0, _callback, *argss, **kwargs))
 
     return _optimize
@@ -92,6 +92,24 @@ def modded_bfgs(fun, grad, x, callback=None, num_iters=3, sgd_step_size=10e-5):
         else:
             break
     return result
+
+@my_unflatten_optimizer
+def modded_basinhopping(fun, grad, x, minimizer_kwargs, num_iter=200, max_bfgs_iter=50):
+    print("Start basinhopping.Current func val:{}".format(fun(x)))
+    #L-BFGS
+    
+        
+    minimizer_kwargs = {"method": "L-BFGS-B","options":{'disp': True,'maxiter':max_bfgs_iter, 
+                                                         'gtol':1e-08, 'ftol':1e-13}, "jac":grad}
+    #OR JUST BFGS
+    #minimizer_kwargs = {"method": "BFGS","options":{'disp': True,'maxiter':max_bfgs_iter, 
+     #                                                    'gtol':1e-08}, "jac":grad}
+    
+    
+    ret= basinhopping(fun, x, minimizer_kwargs=minimizer_kwargs, niter=num_iter)
+    print("Basinhopping fun: f(x) = {}".format((ret.fun)))
+    print("Call fun itself: {}".format(fun(ret.x)))
+    return ret
 
 
 def sgd(fun, grad, x, num_iters=200, init_step_size=0.1, mass=0.1):
