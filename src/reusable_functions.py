@@ -94,13 +94,13 @@ def modded_bfgs(fun, grad, x, callback=None, num_iters=3, sgd_step_size=10e-5):
     return result
 
 @my_unflatten_optimizer
-def modded_basinhopping(fun, grad, x, minimizer_kwargs, num_iter=200, max_bfgs_iter=50):
+def modded_basinhopping(fun, grad, x, minimizer_kwargs, num_iter=200, max_bfgs_iter=50, gtol=1e-05, ftol=1e-9):
     print("Start basinhopping.Current func val:{}".format(fun(x)))
     #L-BFGS
     
         
     minimizer_kwargs = {"method": "L-BFGS-B","options":{'disp': True,'maxiter':max_bfgs_iter, 
-                                                         'gtol':1e-08, 'ftol':1e-13}, "jac":grad}
+                                                         'gtol':1e-05, 'ftol':1e-9}, "jac":grad}
     #OR JUST BFGS
     #minimizer_kwargs = {"method": "BFGS","options":{'disp': True,'maxiter':max_bfgs_iter, 
      #                                                    'gtol':1e-08}, "jac":grad}
