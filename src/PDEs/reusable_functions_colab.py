@@ -83,3 +83,37 @@ def my_lbfgs(fun, grad, x, minimizer_kwargs, num_iter=200, max_bfgs_iter=50, gto
     
     ret.func_values=np.asarray(func_values)
     return ret
+
+
+@my_unflatten_optimizer
+def modded_basinhopping(fun, grad, x, minimizer_kwargs, num_iter=200, max_bfgs_iter=50, gtol=1e-03, ftol=1e-3):
+    print("Start basinhopping.Current func val:{}".format(fun(x)))
+    #L-BFGS
+    
+    func_values=[]
+    plt.figure()
+    plt.ylabel('Function value, log')
+    plt.xlabel('Iteration')
+
+    def callback(x):
+      
+        func_values.append(np.log(fun(x)))
+        if len(func_values) % 30 ==0:
+            plt.clf()
+            plt.plot(np.asarray(func_values))
+            plt.show()
+
+        
+    minimizer_kwargs = {"method": "L-BFGS-B","options":{'disp': True,'maxiter':max_bfgs_iter, 
+                                                         'gtol':gtol, 'ftol':ftol}, "jac":grad, 'callback':callback}
+    #OR JUST BFGS
+    #minimizer_kwargs = {"method": "BFGS","options":{'disp': True,'maxiter':max_bfgs_iter, 
+     #                                                    'gtol':1e-08}, "jac":grad}
+    
+    
+    ret= basinhopping(fun, x, minimizer_kwargs=minimizer_kwargs, niter=num_iter)
+    
+    ret.func_values=np.asarray(func_values)
+    print("Basinhopping fun: f(x) = {}".format((ret.fun)))
+    print("Call fun itself: {}".format(fun(ret.x)))
+    return ret
