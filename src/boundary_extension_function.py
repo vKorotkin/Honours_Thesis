@@ -85,7 +85,7 @@ def plot_2D_function(ax, f, flabel, params, t_max,L, N):
     surf._facecolors2d=surf._facecolors3d
     surf._edgecolors2d=surf._edgecolors3d
 
-def get_parameters(g0,g1,f0,f1,t_max,L,N,layer_sizes):
+def get_parameters_G(g0,g1,f0,f1,t_max,L,N,layer_sizes):
     G=lambda params, x,t: rfc.neural_net_predict(params, np.array([x,t]))
     p0=rfc.init_random_params(1, layer_sizes)
     #Gradient of G w.r.t. time
@@ -151,7 +151,7 @@ def create_or_load_G(g0expr, g1expr, f0expr, f1expr,L, t_max, N, layer_sizes, fn
     identifier="g0: %s, g1: %s, f0: %s, f1: %s" % (g0expr, g1expr, f0expr, f1expr)
     if create_g:
         g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
-        G,p=get_parameters(g0,g1,f0,f1,t_max,L,N,layer_sizes)
+        G,p=get_parameters_G(g0,g1,f0,f1,t_max,L,N,layer_sizes)
         save_G_to_file(G,p,g0expr,g1expr,f0expr,f1expr,fname)
     else:
         G,p=get_G_from_file(fname, identifier)
@@ -180,7 +180,7 @@ def test():
     layer_sizes=[2,10,1]
 
     G,p=create_or_load_G(g0expr, g1expr, f0expr, f1expr,L, t_max, N, \
-        layer_sizes, fname, create_g=True)
+        layer_sizes, fname, create_g=False)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')

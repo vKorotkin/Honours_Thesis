@@ -6,12 +6,13 @@ import matplotlib.pyplot as plt
 from autograd import grad
 
 """
+    Obtain solution to wave equation in 1D. 
+    Solution ansatz: u(x,t)=G(x,t)+D(x,t)Phi(x,t)
+    ---G(x,t) is boundary extension function
     Different IC's and BC's can be subbed in easily - maybe... unsure about this.
     Might be the case for some special ICs or BCs, check Berg/Nystrom paper. 
 """
 
-#BCs arent met
-#plt.show seems to break. Need to fix plots. 
 
 FILE_TO_STORE_G="/home/vassili/Desktop/Thesis/Honours_Thesis.git/data/G_func"
 
@@ -25,8 +26,8 @@ def get_resid_wave_eq(u):
 
 def get_loss_function(u,nx, nt, L, t_max):
     #todo: make x, t generation independent of this. 
-    t=np.linspace(t_max/8,t_max-t_max/8,nt)
-    x=np.linspace(L/8, L-L/8, nx)
+    t=np.linspace(t_max/10,t_max-t_max/10,nt)
+    x=np.linspace(L/10, L-L/10, nx)
     X,T=np.meshgrid(x, t)
 
     resid=get_resid_wave_eq(u)
@@ -89,7 +90,7 @@ def test():
     f1expr='0'
     #Limits and number of points
     L=2*np.pi
-    t_max=4
+    t_max=2
     nx=5
     nt=5
     #Network hyperparameters
