@@ -136,7 +136,9 @@ def plot_result(u,G,D,param_u, param_g,param_D,t_max,L,nx,nt):
     plt.show()
 
 def test():
-
+    """
+    If first time running code set create_f=True in G and D creation
+    """
     fname=FILE_TO_STORE_G
 
     #IC
@@ -160,13 +162,13 @@ def test():
     g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
     loss_function=get_G_loss_function(G,g0,g1,f0,f1,t_max,L,N=15)
     G,param_G=create_or_load_trained_f(G, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max,  \
-        layer_sizes, N=15,maxiter=300,maxfuneval=300,fname=FILE_TO_STORE_G, create_f=False)
+        layer_sizes, N=15,maxiter=300,maxfuneval=300,fname=FILE_TO_STORE_G, create_f=True)
 
 
     D=lambda params, x,t: x*(L-x)*t**2*rfc.neural_net_predict(params, np.array([x,t]))
     loss_function=get_D_loss_function(D,t_max,L,15)
     D,param_D=create_or_load_trained_f(D, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max, \
-        layer_sizes,N=15,maxiter=100,maxfuneval=100,fname=FILE_TO_STORE_D, create_f=False)
+        layer_sizes,N=15,maxiter=100,maxfuneval=100,fname=FILE_TO_STORE_D, create_f=True)
     u, param_u=optimize_u(G,param_G,D,param_D,layer_sizes, nx, nt, L, t_max, max_function_evals=200, max_iterations=200)
     print("Loss function:%.2f", loss_function(param_u))
     plot_result(u,G,D,param_u,param_G,param_D,t_max,L,10*nx,10*nt)
