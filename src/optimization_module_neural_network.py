@@ -3,6 +3,7 @@ import autograd.numpy.random as npr
 from autograd.extend import primitive, defvjp
 
 from scipy.optimize import minimize
+from autograd import grad
 from autograd.misc import flatten
 from autograd.wrap_util import wraps
 from autograd.misc.optimizers import adam, sgd
@@ -43,6 +44,8 @@ def neural_net_predict(params, inputs):
     return outputs 
 
 
+
+
 def my_unflatten_optimizer(optimize):
     """Takes an optimizer that operates on flat 1D numpy arrays and returns a
     wrapped version that handles trees of nested containers (lists/tuples/dicts)
@@ -70,3 +73,14 @@ def unflattened_lbfgs(fun, grad, x, callback, max_feval, max_iter):
     ret=minimize(fun, x, method='L-BFGS-B', jac=grad, callback=callback, options={'disp': True,'maxIter':max_iter, 'maxfun':max_feval} )#, hess=None, hessp=None, bounds=None, constraints=(), tol=None, callback=None, options=None)
     return ret
 
+
+def get_parameters(loss_function, layer_sizes, max_iter,max_funeval):
+    """
+    Optimizes loss_function(params) over neural net parameters defined by layer_sizes. 
+    """
+
+    p0=init_random_params(1, layer_sizes)
+    
+    p, _=unflattened_lbfgs(loss_function, grad(loss_function,0),p0,\
+        max_feval=max_funeval, max_iter=max_iter, callback=None)
+    return p;
