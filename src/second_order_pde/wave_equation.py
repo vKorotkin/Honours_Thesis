@@ -1,11 +1,4 @@
-import optimization_module_neural_network as rfc
-import autograd.numpy as np
 
-import matplotlib.pyplot as plt
-
-from boundary_extension_function import get_G_loss_function ,plot_2D_function,set_labels_and_legends,get_D_loss_function
-from helper import get_functions_from_strings, create_or_load_trained_f
-from autograd import grad, value_and_grad
 """
     Obtain solution to wave equation in 1D. 
     Solution ansatz: u(x,t)=G(x,t)+D(x,t)Phi(x,t)
@@ -30,6 +23,22 @@ from autograd import grad, value_and_grad
 
 FILE_TO_STORE_G="/home/vassili/Desktop/Thesis/Honours_Thesis.git/data/G_func"
 FILE_TO_STORE_D="/home/vassili/Desktop/Thesis/Honours_Thesis.git/data/D_func"
+
+#Hack to be able to import modules from parent folder
+import os,sys,inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0,parentdir)
+
+import optimization_module_neural_network as rfc
+import autograd.numpy as np
+
+import matplotlib.pyplot as plt
+
+from boundary_extension_function import get_G_loss_function ,plot_2D_function,set_labels_and_legends,get_D_loss_function
+from helper import get_functions_from_strings, create_or_load_trained_f
+from autograd import grad, value_and_grad
+
 
 def get_resid_wave_eq(u):
     """
@@ -162,13 +171,13 @@ def test():
     g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
     loss_function=get_G_loss_function(G,g0,g1,f0,f1,t_max,L,N=15)
     G,param_G=create_or_load_trained_f(G, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max,  \
-        layer_sizes, N=15,maxiter=300,maxfuneval=300,fname=FILE_TO_STORE_G, create_f=True)
+        layer_sizes, N=15,maxiter=300,maxfuneval=300,fname=FILE_TO_STORE_G, create_f=False)
 
 
     D=lambda params, x,t: x*(L-x)*t**2*rfc.neural_net_predict(params, np.array([x,t]))
     loss_function=get_D_loss_function(D,t_max,L,15)
     D,param_D=create_or_load_trained_f(D, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max, \
-        layer_sizes,N=15,maxiter=100,maxfuneval=100,fname=FILE_TO_STORE_D, create_f=True)
+        layer_sizes,N=15,maxiter=100,maxfuneval=100,fname=FILE_TO_STORE_D, create_f=False)
     u, param_u=optimize_u(G,param_G,D,param_D,layer_sizes, nx, nt, L, t_max, max_function_evals=200, max_iterations=200)
     print("Loss function:%.2f", loss_function(param_u))
     plot_result(u,G,D,param_u,param_G,param_D,t_max,L,10*nx,10*nt)

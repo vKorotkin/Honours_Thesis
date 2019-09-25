@@ -67,15 +67,17 @@ def get_D_loss_function(D,t_max,L,N):
     x_space=np.linspace(0, L, N)
     X,T=np.meshgrid(x_space, t_space)
     dDdx=grad(D,1)
+    dDdx2=grad(dDdx,1)
     def loss_function(params):
         sum=0.
         #int(np.floor(X.shape[1]/3)),
         for i in range(X.shape[0]):
             for j in range(X.shape[1]):
-                sum=sum+np.square(D(params, X[i,j], T[i,j])-1)
+                sum=sum+np.square(D(params, X[i,j], T[i,j])-1) \
+                    +np.square(dDdx2(params, X[i,j], T[i,j]))
                 #sum=sum+np.square(D(params, X[i,j], T[i,j])-np.tanh(T[i,j]))
-        for t in t_space:
-            sum=sum+np.square(dDdx(params, 0., t))+np.square(dDdx(params, L, t))
+        #for t in t_space:
+        #    sum=sum+np.square(dDdx(params, 0., t))+np.square(dDdx(params, L, t))
 
         return sum/(X.shape[0]*X.shape[1])
     return loss_function
@@ -191,7 +193,7 @@ def test():
     g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
     loss_function=get_G_loss_function(G,g0,g1,f0,f1,t_max,L,N)
     G,p_G=create_or_load_trained_f(G, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max, \
-        layer_sizes,fname=FILE_TO_STORE_G, create_f=True,maxiter=400,maxfuneval=400)
+        layer_sizes,fname=FILE_TO_STORE_G, create_f=False,maxiter=400,maxfuneval=400)
     
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
