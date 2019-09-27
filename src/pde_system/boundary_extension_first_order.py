@@ -61,6 +61,7 @@ def get_G_loss_function(G,g0,g1,f0,f1,t_max,L,N):
     t_space=np.linspace(0,t_max,N)
     x_space=np.linspace(0, L, N)
 
+    X,T=np.meshgrid(x_space, t_space)
     #maybe vectorize, but is ok for now
     def loss_function(params):
         sum=0.
@@ -69,6 +70,10 @@ def get_G_loss_function(G,g0,g1,f0,f1,t_max,L,N):
             sum=sum+(G(params,x,0.)[0]-g0(x))**2+(G(params,x,0.)[1]-g1(x))**2
         for t in t_space:
             sum=sum+(G(params,0.,t)[0]-f0(x))**2+(G(params,L,t)[0]-f1(x))**2
+
+        #for i in range(X.shape[0]):
+        #    for j in range(X.shape[1]):
+        #        sum=sum+0.2*(G(params,L,t)[2])**2 #want G2=0 everywhere just in case
         return sum
 
     return loss_function
@@ -78,12 +83,17 @@ def get_D_loss_function(D,g0,g1,f0,f1,t_max,L,N):
     x_space=np.linspace(0, L, N)
     #same as G but instead of g0 etc just want 0 at the boundaries
     #maybe vectorize, but is ok for now
+    X,T=np.meshgrid(x_space, t_space)
+
     def loss_function(params):
         sum=0.
         for x in x_space:
             sum=sum+(D(params,x,0.)[0])**2+(D(params,x,0.)[1])**2
         for t in t_space:
             sum=sum+(D(params,0.,t)[0])**2+(D(params,L,t)[0])**2
+        for i in range(1, X.shape[0]-1):
+            for j in range(1, X.shape[1]-1):
+                sum=sum+np.linalg.norm((D(params,X[i,j], T[i,j]))-1)**2
         return sum
     return loss_function
     
@@ -112,26 +122,54 @@ def plot_vector_function_xt(ax, f, flabel, params, t_max,L, N, element_to_plot=0
     surf._facecolors2d=surf._facecolors3d
     surf._edgecolors2d=surf._edgecolors3d
 
-def test_G(g0expr,g1expr,f0expr,f1expr,t_max,L, N, element_to_plot, create_f):
+def test_G(g0expr,g1expr,f0expr,f1expr,t_max,L, N, maxiter, create_f,layer_sizes=[2,7,7,3]):
 
-    layer_sizes=[2,7,7,3]
+    
     G=lambda params, x,t: rfc.neural_net_predict(params, np.array([x,t]))
     g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
     loss_function=get_G_loss_function(G,g0,g1,f0,f1,t_max,L,N)
     
     #G
     G,p_G=create_or_load_trained_f(G, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max, \
-        layer_sizes,fname=FILE_TO_STORE_G, create_f=create_f,maxiter=400,maxfuneval=400)
+        layer_sizes,fname=FILE_TO_STORE_G, create_f=create_f,maxiter=maxiter,maxfuneval=maxiter)
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
-    plot_targets(ax, g0,g1,f0,f1,t_max,L,20*N)
+    for element_to_plot in range(3):
+        
+        ax = fig.add_subplot(130+element_to_plot+1, projection='3d')
+        g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
+        #plot_targets(ax, g0,g1,f0,f1,t_max,L,20*N)
 
-    plot_vector_function_xt(ax, G,"$G$", p_G, t_max,L,N, element_to_plot=element_to_plot)
-    plt.title("$G_%d$" % element_to_plot)
+        plot_vector_function_xt(ax, G,"$G$", p_G, t_max,L,N, element_to_plot=element_to_plot)
+        ax.set_zlim(-1,1)
+        plt.title("$G_%d$" % element_to_plot)
+    plt.show(block=True)
+def test_D(g0expr,g1expr,f0expr,f1expr,t_max,L, N, maxiter, create_f):
+
+    layer_sizes=[2,7,7,3]
+    #D=lambda params, x,t: rfc.neural_net_predict(params, np.array([x,t]))
+    g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
+    
+    #Can just use this, want it to be zero at the boundaries. 
+    #Can try to use similar trick for second order wave eq formilation somehow? 
+    D=lambda params,x,t:(L-x)*x*t*(t_max-t)*np.ones(3)
+    #D
+    #loss_function=get_D_loss_function(D,g0,g1,f0,f1,t_max,L,N)
+    #D,p_D=create_or_load_trained_f(D, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max, \
+    #    layer_sizes,fname=FILE_TO_STORE_D, create_f=create_f,maxiter=maxiter,maxfuneval=maxiter)
+    fig = plt.figure()
+    for element_to_plot in range(3):
+        
+        ax = fig.add_subplot(130+element_to_plot+1, projection='3d')
+        g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
+        #plot_targets(ax, g0,g1,f0,f1,t_max,L,20*N)
+
+        plot_vector_function_xt(ax, D,"$D$", None, t_max,L,N, element_to_plot=element_to_plot)
+        plt.title("$D_%d$" % element_to_plot)
     plt.show(block=True)
     
+
+
 def test():
     #The eval stuff is done to be able to identify the functions that G was supposed to fit 
     #when saving and loading. 
@@ -147,24 +185,9 @@ def test():
     t_max=4
     N=15
 
-    test_G(g0expr,g1expr,f0expr,f1expr, t_max,L, N, element_to_plot=0,create_f=True)
+    test_G(g0expr,g1expr,f0expr,f1expr, t_max,L, N, maxiter=100,create_f=True, layer_sizes=[2,7,7,3])
+    #test_D(g0expr,g1expr,f0expr,f1expr, t_max,L, N, maxiter=100,create_f=True)
 
-"""
-    #D
-    #D=lambda params, x,t: rfc.neural_net_predict(params, np.array([x,t]))
-    #D,p_D=create_or_load_trained_f(D, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max, \
-     #   layer_sizes,fname=FILE_TO_STORE_G, create_f=False,maxiter=400,maxfuneval=400)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
-    plot_targets(ax, g0,g1,f0,f1,t_max,L,20*N)
-
-    element_to_plot=1
-    plot_vector_function_xt(ax, D,"$D$", p_D, t_max,L,N, element_to_plot=element_to_plot)
-    plt.title("$D_%d$" % element_to_plot)
-    plt.show(block=True)
-"""
 
 
     #Need to add test, see how ut corresponds to u? It probably won't. 
