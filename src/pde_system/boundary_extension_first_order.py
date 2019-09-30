@@ -41,7 +41,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from helper import create_or_load_trained_f, get_functions_from_strings
-from helper_plotting import plot_targets
+from helper_plotting import plot_targets, plot_vector_function_xt, plot_vector_function_all_elements
 import optimization_module_neural_network as rfc
 from optimization_module_neural_network import get_parameters, init_random_params
 
@@ -97,30 +97,6 @@ def get_D_loss_function(D,g0,g1,f0,f1,t_max,L,N):
         return sum
     return loss_function
     
-def plot_vector_function_xt(ax, f, flabel, params, t_max,L, N, element_to_plot=0):
-    """
-    Uses axes ax to plot f(params, x,t) over x,t grid on [0,L]x[0,t_max] with N points in each direction. 
-    Labels f with flabel. 
-    Parameters
-    -----------
-    ax: Axes of figure on which to plot
-    """
-    t=np.linspace(0,t_max,N)
-    x=np.linspace(0, L, N)
-    X,T=np.meshgrid(x, t)
-    U=np.zeros(X.shape)    
-
-    dudt_0=np.zeros(x.shape)
-    for i in range(X.shape[0]):
-        for j in range(X.shape[1]):
-            U[i,j]=f(params,X[i,j], T[i,j])[element_to_plot]
-
-    surf = ax.plot_surface(X, T, U, cmap=mpl.cm.coolwarm,
-                        linewidth=0, antialiased=False, label=flabel)
-    #some kind of bug with legend if this isnt here
-    #https://stackoverflow.com/questions/54994600/pyplot-legend-poly3dcollection-object-has-no-attribute-edgecolors2d
-    surf._facecolors2d=surf._facecolors3d
-    surf._edgecolors2d=surf._edgecolors3d
 
 def test_G(g0expr,g1expr,f0expr,f1expr,t_max,L, N, maxiter, create_f,layer_sizes=[2,7,7,3]):
 
@@ -133,17 +109,10 @@ def test_G(g0expr,g1expr,f0expr,f1expr,t_max,L, N, maxiter, create_f,layer_sizes
     G,p_G=create_or_load_trained_f(G, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max, \
         layer_sizes,fname=FILE_TO_STORE_G, create_f=create_f,maxiter=maxiter,maxfuneval=maxiter)
 
-    fig = plt.figure()
-    for element_to_plot in range(3):
-        
-        ax = fig.add_subplot(130+element_to_plot+1, projection='3d')
-        g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
-        #plot_targets(ax, g0,g1,f0,f1,t_max,L,20*N)
+    plot_vector_function_all_elements(G, p_G, "G", g0expr,g1expr,f0expr,f1expr, t_max,L,N)
 
-        plot_vector_function_xt(ax, G,"$G$", p_G, t_max,L,N, element_to_plot=element_to_plot)
-        ax.set_zlim(-1,1)
-        plt.title("$G_%d$" % element_to_plot)
-    plt.show(block=True)
+
+    
 def test_D(g0expr,g1expr,f0expr,f1expr,t_max,L, N, maxiter, create_f):
 
     layer_sizes=[2,7,7,3]
@@ -157,16 +126,7 @@ def test_D(g0expr,g1expr,f0expr,f1expr,t_max,L, N, maxiter, create_f):
     #loss_function=get_D_loss_function(D,g0,g1,f0,f1,t_max,L,N)
     #D,p_D=create_or_load_trained_f(D, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max, \
     #    layer_sizes,fname=FILE_TO_STORE_D, create_f=create_f,maxiter=maxiter,maxfuneval=maxiter)
-    fig = plt.figure()
-    for element_to_plot in range(3):
-        
-        ax = fig.add_subplot(130+element_to_plot+1, projection='3d')
-        g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)
-        #plot_targets(ax, g0,g1,f0,f1,t_max,L,20*N)
-
-        plot_vector_function_xt(ax, D,"$D$", None, t_max,L,N, element_to_plot=element_to_plot)
-        plt.title("$D_%d$" % element_to_plot)
-    plt.show(block=True)
+    plot_vector_function_all_elements(D, None, "D", g0expr,g1expr,f0expr,f1expr, t_max,L,N)
     
 
 
@@ -185,8 +145,8 @@ def test():
     t_max=4
     N=15
 
-    test_G(g0expr,g1expr,f0expr,f1expr, t_max,L, N, maxiter=100,create_f=True, layer_sizes=[2,7,7,3])
-    #test_D(g0expr,g1expr,f0expr,f1expr, t_max,L, N, maxiter=100,create_f=True)
+    test_G(g0expr,g1expr,f0expr,f1expr, t_max,L, N, maxiter=400,create_f=True, layer_sizes=[2,7,7,3])
+    test_D(g0expr,g1expr,f0expr,f1expr, t_max,L, N, maxiter=100,create_f=True)
 
 
 
