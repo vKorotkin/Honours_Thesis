@@ -12,6 +12,10 @@ from helper import create_or_load_trained_f, get_functions_from_strings
 import optimization_module_neural_network as rfc
 from optimization_module_neural_network import get_parameters
 
+
+
+
+
 def plot_targets(ax, g0,g1,f0,f1,t_max,L,N):
     """
     Plot the optimization targets on the boundary (initial and boundary conditions)
@@ -65,5 +69,43 @@ def plot_vector_function_all_elements(f, p_f, identifier, g0expr,g1expr,f0expr,f
 
         plot_vector_function_xt(ax, f,identifier, p_f, t_max,L,N, element_to_plot=element_to_plot)
         #ax.set_zlim(-1,1)
-        plt.title("$"+identifier+"_%d$" % element_to_plot)
-    plt.show(block=True)
+        plt.title("$"+identifier+"_%d$" % element_to_plot+1)
+    
+
+
+def plot_2D_function(ax, f, flabel, params, t_max,L, N):
+    """
+    Uses axes ax to plot f(params, x,t) over x,t grid on [0,L]x[0,t_max] with N points in each direction. 
+    Labels f with flabel. 
+    Parameters
+    -----------
+    ax: Axes of figure on which to plot
+    """
+    t=np.linspace(0,t_max,N)
+    x=np.linspace(0, L, N)
+    X,T=np.meshgrid(x, t)
+    U=np.zeros(X.shape)
+    dudt_0=np.zeros(x.shape)
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            U[i,j]=f(params,X[i,j], T[i,j])
+
+    surf = ax.plot_surface(X, T, U, cmap=mpl.cm.coolwarm,
+                        linewidth=0, antialiased=False, label=flabel)
+    #some kind of bug with legend if this isnt here
+    #https://stackoverflow.com/questions/54994600/pyplot-legend-poly3dcollection-object-has-no-attribute-edgecolors2d
+    surf._facecolors2d=surf._facecolors3d
+    surf._edgecolors2d=surf._edgecolors3d
+
+def set_labels_and_legends(ax, zlabel="$u$"):
+    """
+    Set labels and legend for axes. 
+    NOTE: sets z axis to u by default. 
+    Parameters
+    -----------
+    ax: Axes of figure on which to plot
+    """
+    plt.xlabel("$x$")
+    plt.ylabel("$t$")
+    ax.set_zlabel('$u$')
+    plt.legend()

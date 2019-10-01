@@ -1,16 +1,3 @@
-
-import os
-import autograd.numpy as np
-from autograd import grad, jacobian
-
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from helper import create_or_load_trained_f, get_functions_from_strings
-
-import optimization_module_neural_network as rfc
-from optimization_module_neural_network import get_parameters
-
 """
 This module provides the boundary extension function for the wave equation neural network solution
 in 1D. 
@@ -34,6 +21,24 @@ N: Number of points taken (common for time and space)
 """
 FILE_TO_STORE_G="/home/vassili/Desktop/Thesis/Honours_Thesis.git/data/G_func"
 FILE_TO_STORE_D="/home/vassili/Desktop/Thesis/Honours_Thesis.git/data/D_func"
+
+#Hack to be able to import modules from parent folder
+import os,sys,inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0,parentdir)
+
+import autograd.numpy as np
+from autograd import grad, jacobian
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from helper import create_or_load_trained_f, get_functions_from_strings
+
+import optimization_module_neural_network as rfc
+from optimization_module_neural_network import get_parameters
+from helper_plotting import plot_targets, plot_2D_function, set_labels_and_legends
 
 mpl.rc('text', usetex=True)
 mpl.rcParams['font.size']=15;
@@ -82,59 +87,9 @@ def get_D_loss_function(D,t_max,L,N):
         return sum/(X.shape[0]*X.shape[1])
     return loss_function
 
-def plot_targets(ax, g0,g1,f0,f1,t_max,L,N):
-    """
-    Plot the optimization targets on the boundary (initial and boundary conditions)
-
-    Parameters
-    -----------
-    ax: Axes of figure on which to plot
-    """
-    t=np.linspace(0,t_max,N)
-    x=np.linspace(0, L, N)
-    
-    ax.plot(x, np.zeros(t.shape), g0(x), label="Target $G(x,0)$")
-    ax.plot(x, np.zeros(t.shape), g1(x),label="Target $G_t(x,0)$")
-    ax.plot(0*np.ones(x.shape), t, f0(x),label="Target $G(0,t)$")
-    ax.plot(L*np.ones(x.shape), t, f1(x),label="Target $G(L,t)$")
-
-def set_labels_and_legends(ax, zlabel="$u$"):
-    """
-    Set labels and legend for axes. 
-    NOTE: sets z axis to u by default. 
-    Parameters
-    -----------
-    ax: Axes of figure on which to plot
-    """
-    plt.xlabel("$x$")
-    plt.ylabel("$t$")
-    ax.set_zlabel('$u$')
-    plt.legend()
 
 
-def plot_2D_function(ax, f, flabel, params, t_max,L, N):
-    """
-    Uses axes ax to plot f(params, x,t) over x,t grid on [0,L]x[0,t_max] with N points in each direction. 
-    Labels f with flabel. 
-    Parameters
-    -----------
-    ax: Axes of figure on which to plot
-    """
-    t=np.linspace(0,t_max,N)
-    x=np.linspace(0, L, N)
-    X,T=np.meshgrid(x, t)
-    U=np.zeros(X.shape)
-    dudt_0=np.zeros(x.shape)
-    for i in range(X.shape[0]):
-        for j in range(X.shape[1]):
-            U[i,j]=f(params,X[i,j], T[i,j])
 
-    surf = ax.plot_surface(X, T, U, cmap=mpl.cm.coolwarm,
-                        linewidth=0, antialiased=False, label=flabel)
-    #some kind of bug with legend if this isnt here
-    #https://stackoverflow.com/questions/54994600/pyplot-legend-poly3dcollection-object-has-no-attribute-edgecolors2d
-    surf._facecolors2d=surf._facecolors3d
-    surf._edgecolors2d=surf._edgecolors3d
 
 
 def error_plots(G,D,p_G, p_D, g0,g1,f0,f1,t_max,L,N):
@@ -206,7 +161,7 @@ def test():
     D=lambda params, x,t: x*(L-x)*t**2*rfc.neural_net_predict(params, np.array([x,t]))
     loss_function=get_D_loss_function(D,t_max,L,N)
     D,p_D=create_or_load_trained_f(D, loss_function, g0expr, g1expr, f0expr, f1expr,L, t_max, \
-        layer_sizes,maxiter=300,maxfuneval=300,fname=FILE_TO_STORE_D, create_f=True)
+        layer_sizes,maxiter=300,maxfuneval=300,fname=FILE_TO_STORE_D, create_f=False)
 
 
     fig = plt.figure()
