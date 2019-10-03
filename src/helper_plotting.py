@@ -72,6 +72,21 @@ def plot_vector_function_all_elements(f, p_f, identifier, g0expr,g1expr,f0expr,f
         plt.title("$"+identifier+"_%d$" % element_to_plot+1)
     
 
+def plot_2D_function_general_domain(ax, domain, f, flabel):
+        #f_vals=domain 
+        f_vals=[]
+        for dom_idx, (X,Y) in enumerate(domain):
+                f_vals.append(np.zeros(X.shape))
+                for i in range(X.shape[0]):
+                        for j in range(X.shape[1]):
+                                f_vals[dom_idx][i][j]=f(X[i,j], Y[i,j])
+        for dom_idx, (X,Y) in enumerate(domain):
+                surf = ax.plot_surface(X, Y, f_vals[dom_idx], cmap=mpl.cm.coolwarm,
+                                        linewidth=0, antialiased=False, label=flabel)
+                #some kind of bug with legend if this isnt here
+                #https://stackoverflow.com/questions/54994600/pyplot-legend-poly3dcollection-object-has-no-attribute-edgecolors2d
+                surf._facecolors2d=surf._facecolors3d
+                surf._edgecolors2d=surf._edgecolors3d
 
 def plot_2D_function(ax, f, flabel, params, t_max,L, N):
     """

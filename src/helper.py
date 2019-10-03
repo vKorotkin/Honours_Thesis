@@ -5,6 +5,8 @@ import optimization_module_neural_network as rfc
 from optimization_module_neural_network import get_parameters
 from autograd import grad
 
+
+
 def get_functions_from_strings(g0expr,g1expr,f0expr,f1expr):
     """
     Used to have identifiers when storing/retrieving specific G's,
@@ -34,6 +36,21 @@ def save_fun_to_file(fun,p,g0expr,g1expr,f0expr,f1expr,fname):
     else:
         fun_dict = {identifier: {'Fun':fun, 'Parameters':p}}
         pickle.dump(fun_dict, open(fname, "wb"))
+
+def save_var_to_file(var, identifier, fname):
+    if os.path.isfile(fname):
+        if os.path.getsize(fname) > 0:
+            fun_dict = pickle.load(open(fname, "rb"))
+        fun_dict[identifier]=var
+        pickle.dump(fun_dict, open(fname, "wb"))
+    else:
+        fun_dict = {identifier: var}
+        pickle.dump(fun_dict, open(fname, "wb"))
+
+def get_var_from_file(identifier, fname):
+    fun_dict = pickle.load(open(fname, "rb"))
+    var=fun_dict[identifier]
+    return var
 
 def get_fun_from_file(fname, identifier):
     """

@@ -3,6 +3,8 @@ from autograd import grad
 import optimization_module_neural_network as optnn
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from helper import save_var_to_file, get_var_from_file
+from helper_plotting import plot_2D_function_general_domain
 
 mpl.rc('text', usetex=True)
 mpl.rcParams['font.size']=15;
@@ -19,7 +21,8 @@ class SingleVariable_PDE_Solver():
         self.get_resid=get_resid
         self.resid=None
         self.forcing_function_expr=forcing_function_expr
-    def initialize_net_fun_from_params(self, layer_sizes):
+    @staticmethod
+    def initialize_net_fun_from_params(layer_sizes):
         return lambda params, x: optnn.neural_net_predict(np.array(x))
     def initialize_g_d_dirichlet(self, f0,fL):
         self.G=lambda x: (fL-f0)/self.L*x+f0
@@ -76,3 +79,86 @@ class SingleVariable_PDE_Solver():
         plt.savefig(self.fig_dir+id+"_resid.eps")
         plt.show(block=True)
         return 0
+
+class TwoVariablesOneUnknown_PDE_Solver():
+    """A class to solve two variable one unknown PDEs, e.g. 1D wave EQ, 2D Laplace
+    Attributes:
+        domain: list of lists that each contain two coordinate matrices. 
+            wave eq: [[X,T]] (single rectangular domain, space-time)
+            laplace 2d: [[X1,Y1], [X2, Y2]] (union of two rectangular domains to make l-shaped plate)
+        var_ids: list of strings, identifying each variable. [var1, var2, unknown]
+    """
+    def __init__(self,domain, plot_domain, id, local_path, var_ids):
+        self.domain=domain
+        self.plot_domain=plot_domain
+        self.local_path=local_path
+        self.data_file=local_path+"/data/trained_functions_"+id
+        self.var_ids=var_ids
+        self.id=id
+        self.G=None
+        self.D=None 
+        self.U=None
+    def set_g_d(self, G_ansatz, D_ansatz, G_loss, D_loss, layer_sizes, max_fun_evals=200, create_G=True, create_D=True):
+        p0=optnn.init_random_params(1, layer_sizes)
+
+        if G_loss is not None:
+            if create_G==True:
+                self.G=self.optimize_func(G_ansatz, p0, G_loss, max_fun_evals)
+                save_var_to_file(self.G, self.id+"G", self.data_file)
+            else:
+                self.G=get_var_from_file(self.id+"G", self.data_file)
+        else: 
+            self.G=lambda x,y: G_ansatz(None, x,y)
+
+        if D_loss is not None:
+            if create_D==True:
+                self.D=self.optimize_func(D_ansatz, p0, D_loss, max_fun_evals)
+                save_var_to_file(self.D, self.id+"D", self.data_file)
+            else:
+                self.D=get_var_from_file(self.id+"D", self.data_file)
+        else: 
+            self.D=lambda x,y: D_ansatz(None, x,y)
+    @staticmethod                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+    def optimize_func(f_ansatz, x0, loss_function, max_fun_evals):
+        loss_grad=grad(loss_function,0)
+        p, _=optnn.unflattened_lbfgs(loss_function, loss_grad, x0, \
+            max_feval=max_fun_evals, max_iter=max_fun_evals, callback=None)
+        fstar=lambda x,y: f_ansatz(p,x,y)
+        return fstar
+    def get_local_eq_loss_function(self, resid):
+        vresid=np.vectorize(resid,excluded=[0])
+        def loss_function(params):
+            sum=0.
+            for (X,Y) in self.domain:
+                res_arr=vresid(params,X, Y)
+                sum = sum + np.sum(res_arr)/(res_arr.shape[0]*res_arr.shape[1])
+            return sum
+        return loss_function
+    def solve(self, get_resid, layer_sizes, max_fun_evals, create_U=True):
+        if create_U:
+            x0=optnn.init_random_params(1, layer_sizes)    
+            U=lambda params,x,y:self.G(x,y)+self.D(x,y)*optnn.neural_net_predict(params,np.array([x,y]))
+            resid=get_resid(U)
+            self.U=self.optimize_func(U, x0, self.get_local_eq_loss_function(resid), max_fun_evals)
+            save_var_to_file(self.U, self.id+"U", self.data_file)
+        else:
+            self.U=get_var_from_file(self.id+"U", self.data_file)
+        return 0
+
+    def plot_quantity(self, ax, quantity_fun, fun_id):
+        plot_2D_function_general_domain(ax, self.plot_domain, quantity_fun, "$%s$" % fun_id)
+        #plt.title("%s: $G(%s, %s)$" % (self.id, self.var_ids[0], self.var_ids[1]))
+        plt.title("%s: $%s(%s,%s)$" % (self.id, fun_id, self.var_ids[0], self.var_ids[1]))
+        plt.xlabel("$"+self.var_ids[0]+"$")
+        plt.ylabel("$"+self.var_ids[1]+"$")
+        ax.set_zlabel("$"+self.var_ids[2]+"$")
+    def plot_results(self):
+        fig=plt.figure()
+        ax = fig.add_subplot(131, projection='3d')
+        self.plot_quantity(ax, self.G, "G")
+        ax = fig.add_subplot(132, projection='3d')
+        self.plot_quantity(ax, self.D, "D")
+        if self.U is not None:
+            ax = fig.add_subplot(133, projection='3d')
+            self.plot_quantity(ax, self.U, "U")
+        plt.show(block=True)
