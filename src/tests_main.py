@@ -37,9 +37,9 @@ def test_undamped_mass_spring_1D():
 
 def test_wave_1D():
     L=2*np.pi 
-    t_max=5
-    X, T=generate_square_domain(x_min=0., x_max=L, y_min=0., y_max=t_max, nx=7, ny=7)
-    X_plot, T_plot=generate_square_domain(x_min=0., x_max=L, y_min=0., y_max=t_max, nx=30, ny=30)
+    t_max=3
+    X, T=generate_square_domain(x_min=0., x_max=L, y_min=0., y_max=t_max, nx=5, ny=5)
+    X_plot, T_plot=generate_square_domain(x_min=0., x_max=L, y_min=0., y_max=t_max, nx=10, ny=10)
 
     G_ansatz=lambda params, x,t: optnn.neural_net_predict(params, np.array([x,t]))
     D_ansatz=lambda params, x,t: x*(L-x)*t**2*optnn.neural_net_predict(params, np.array([x,t]))
@@ -53,7 +53,7 @@ def test_wave_1D():
 
     wave1D.set_g_d(G_ansatz, D_ansatz, G_loss=G_loss, D_loss=D_loss, layer_sizes=[2,10,10,1], \
         create_G=False, create_D=False, max_fun_evals=200)
-    wave1D.solve(lf.get_resid_wave_eq_1D, [2,10,10,1], max_fun_evals=200)
+    wave1D.solve(lf.get_resid_wave_eq_1D, [2,10,10,10,1], max_fun_evals=100, create_U=True)
     wave1D.plot_results()
 
 def test_laplace_2D_L_shape():
@@ -72,19 +72,19 @@ def test_laplace_2D_L_shape():
 def test_laplace_square():
     Lx=4
     Ly=4
-    X, Y=generate_square_domain(x_min=0., x_max=Lx, y_min=0., y_max=Ly, nx=7, ny=7)
+    X, Y=generate_square_domain(x_min=0., x_max=Lx, y_min=0., y_max=Ly, nx=4, ny=4)
     X_plot, Y_plot=generate_square_domain(x_min=0., x_max=Lx, y_min=0., y_max=Ly, nx=30, ny=30)
 
     G_ansatz=lambda params, x,y: 0
-    D_ansatz=lambda params, x,y: x*(Lx-x)*y*(Ly-y)
+    D_ansatz=lambda params, x,y: x*(Lx-x)*y*(Ly-y)/(Lx*Ly)
 
     laplace2Dsquare=cdm.TwoVariablesOneUnknown_PDE_Solver(\
         domain=[[X,Y]],id="Laplace2D", plot_domain=[[X_plot, Y_plot]], \
-        local_path=LOCAL_PATH,var_ids=["x","t","u"])
+        local_path=LOCAL_PATH,var_ids=["x","y","u"])
 
     laplace2Dsquare.set_g_d(G_ansatz, D_ansatz, G_loss=None, D_loss=None, layer_sizes=[2,10,10,1], \
-        create_G=False, create_D=True, max_fun_evals=200)
-    laplace2Dsquare.solve(lf.get_resid_Laplace_2D, [2,10,10,1], max_fun_evals=200)
+        create_G=None, create_D=None, max_fun_evals=200)
+    laplace2Dsquare.solve(lf.get_resid_Laplace_2D, [2,7,7,7,1], max_fun_evals=100, create_U=False)
     laplace2Dsquare.plot_results()
 def test():
     #test_diffusion_1D()

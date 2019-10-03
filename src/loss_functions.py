@@ -103,6 +103,6 @@ def get_resid_Laplace_2D(u):
     uxx=grad(ux,1)
     uy=grad(u, 2)
     uyy=grad(uy, 2)
-    resid=lambda params,x,t: np.square(uxx(params, x, t)+uyy(params, x, t))
+    resid=lambda params,x,t: np.square(uxx(params, x, t)+uyy(params, x, t)+1.)
     return resid
 

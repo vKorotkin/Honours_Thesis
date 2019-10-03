@@ -98,12 +98,14 @@ class TwoVariablesOneUnknown_PDE_Solver():
         self.G=None
         self.D=None 
         self.U=None
+        self.resid=None
+        self.pstar_U=None
     def set_g_d(self, G_ansatz, D_ansatz, G_loss, D_loss, layer_sizes, max_fun_evals=200, create_G=True, create_D=True):
         p0=optnn.init_random_params(1, layer_sizes)
 
         if G_loss is not None:
             if create_G==True:
-                self.G=self.optimize_func(G_ansatz, p0, G_loss, max_fun_evals)
+                self.G, _=self.optimize_func(G_ansatz, p0, G_loss, max_fun_evals)
                 save_var_to_file(self.G, self.id+"G", self.data_file)
             else:
                 self.G=get_var_from_file(self.id+"G", self.data_file)
@@ -112,7 +114,7 @@ class TwoVariablesOneUnknown_PDE_Solver():
 
         if D_loss is not None:
             if create_D==True:
-                self.D=self.optimize_func(D_ansatz, p0, D_loss, max_fun_evals)
+                self.D, _=self.optimize_func(D_ansatz, p0, D_loss, max_fun_evals)
                 save_var_to_file(self.D, self.id+"D", self.data_file)
             else:
                 self.D=get_var_from_file(self.id+"D", self.data_file)
@@ -124,7 +126,7 @@ class TwoVariablesOneUnknown_PDE_Solver():
         p, _=optnn.unflattened_lbfgs(loss_function, loss_grad, x0, \
             max_feval=max_fun_evals, max_iter=max_fun_evals, callback=None)
         fstar=lambda x,y: f_ansatz(p,x,y)
-        return fstar
+        return fstar, p
     def get_local_eq_loss_function(self, resid):
         vresid=np.vectorize(resid,excluded=[0])
         def loss_function(params):
@@ -135,16 +137,19 @@ class TwoVariablesOneUnknown_PDE_Solver():
             return sum
         return loss_function
     def solve(self, get_resid, layer_sizes, max_fun_evals, create_U=True):
+        U=lambda params,x,y:self.G(x,y)+self.D(x,y)*optnn.neural_net_predict(params,np.array([x,y]).reshape(1,2))
+        resid=get_resid(U)
         if create_U:
             x0=optnn.init_random_params(1, layer_sizes)    
-            U=lambda params,x,y:self.G(x,y)+self.D(x,y)*optnn.neural_net_predict(params,np.array([x,y]))
-            resid=get_resid(U)
-            self.U=self.optimize_func(U, x0, self.get_local_eq_loss_function(resid), max_fun_evals)
+            self.U, self.pstar_U=self.optimize_func(U, x0, self.get_local_eq_loss_function(resid), max_fun_evals)
             save_var_to_file(self.U, self.id+"U", self.data_file)
+            save_var_to_file(self.pstar_U, self.id+"pstar_U", self.data_file)
         else:
             self.U=get_var_from_file(self.id+"U", self.data_file)
+            self.pstar_U=get_var_from_file(self.id+"pstar_U", self.data_file)
+        self.resid=resid
         return 0
-
+        
     def plot_quantity(self, ax, quantity_fun, fun_id):
         plot_2D_function_general_domain(ax, self.plot_domain, quantity_fun, "$%s$" % fun_id)
         #plt.title("%s: $G(%s, %s)$" % (self.id, self.var_ids[0], self.var_ids[1]))
@@ -154,11 +159,13 @@ class TwoVariablesOneUnknown_PDE_Solver():
         ax.set_zlabel("$"+self.var_ids[2]+"$")
     def plot_results(self):
         fig=plt.figure()
-        ax = fig.add_subplot(131, projection='3d')
+        ax = fig.add_subplot(221, projection='3d')
         self.plot_quantity(ax, self.G, "G")
-        ax = fig.add_subplot(132, projection='3d')
+        ax = fig.add_subplot(222, projection='3d')
         self.plot_quantity(ax, self.D, "D")
         if self.U is not None:
-            ax = fig.add_subplot(133, projection='3d')
+            ax = fig.add_subplot(223, projection='3d')
             self.plot_quantity(ax, self.U, "U")
+            ax = fig.add_subplot(224, projection='3d')
+            self.plot_quantity(ax, lambda x,y: self.resid(self.pstar_U, x,y), "Resid")
         plt.show(block=True)
