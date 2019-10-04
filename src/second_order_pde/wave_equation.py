@@ -45,7 +45,7 @@ def get_resid_wave_eq(u):
     Generate wave equation residual function from solution ansatz u
     
     Returns
-    --------
+    -------
     resid: function resid(params,x,t). Returns residual of PDE from neural network parameters and x,t space and time positions. 
     """
     ux=grad(u,1)
@@ -67,7 +67,8 @@ def get_loss_function(u,nx, nt, L, t_max):
     """
     #todo: make x, t generation independent of this. Perhaps random generation? 
     t=np.linspace(0,t_max,nt)
-    x=np.linspace(0, L, nx)
+    #The displacement on boundaries prescribed. Leave those alone.
+    x=np.linspace(L/10, L*9/10, nx)
 
     #Get and vectorized resid to evaluate and sum over all the collocation points
     resid=get_resid_wave_eq(u)
@@ -159,13 +160,13 @@ def test():
     f1expr='0'
     #Limits and number of points
     L=2*np.pi
-    t_max=0.5
-    nx=4
-    nt=4
+    t_max=2
+    nx=12
+    nt=8
     #Network hyperparameters
-    layer_sizes=[2,10,10,1]
-    max_function_evals=100
-    max_iterations=100
+    layer_sizes=[2,10,10,10,1]
+    max_function_evals=200
+    max_iterations=200
 
     G=lambda params, x,t: rfc.neural_net_predict(params, np.array([x,t]))
     g0,g1,f0,f1=get_functions_from_strings(g0expr,g1expr,f0expr,f1expr)

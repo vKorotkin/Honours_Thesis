@@ -165,7 +165,7 @@ class TwoVariablesOneUnknown_PDE_Solver():
         self.plot_quantity(ax, self.D, "D")
         if self.U is not None:
             ax = fig.add_subplot(223, projection='3d')
-            self.plot_quantity(ax, self.U, "U")
+            self.plot_quantity(ax, self.U, self.var_ids[2])
             ax = fig.add_subplot(224, projection='3d')
-            self.plot_quantity(ax, lambda x,y: self.resid(self.pstar_U, x,y), "Resid")
+            self.plot_quantity(ax, lambda x,y: self.resid(self.pstar_U, x,y), "r")
         plt.show(block=True)

@@ -27,7 +27,6 @@ def init_random_params(scale, layer_sizes, rs=npr.RandomState()):
              scale * rs.randn(n)]      # bias vector
             for m, n in zip(layer_sizes[:-1], layer_sizes[1:])]
     
-    
 def init_ones_params(scale, layer_sizes, rs=npr.RandomState()):
     """Build a list of (weights, biases) tuples,
        one for each layer in the net."""
@@ -35,10 +34,28 @@ def init_ones_params(scale, layer_sizes, rs=npr.RandomState()):
              scale * np.ones(n)]      # bias vector
             for m, n in zip(layer_sizes[:-1], layer_sizes[1:])]
 
+
 def neural_net_predict(params, inputs):
     for W, b in params:
-        outputs = np.dot(inputs, W) + b;
-        inputs=np.tanh(outputs);
+        outputs = np.dot(inputs, W) + b
+        inputs=np.tanh(outputs)
+        #inputs=relu(outputs);
+        #inputs = sigmoid(outputs);
+    return outputs 
+
+def dtanh_dx(x):
+    return 1.-np.square(np.tanh(x))
+
+def neural_net_derivative(params, inputs):
+    #For a neural network with one output
+    #Compute gradient of network w.r.t inputs
+    for i, (W, b) in enumerate(params):
+        if i==0:
+            outputs = np.dot(inputs, W) + b
+            inputs=np.tanh(outputs)
+        else: 
+            outputs = np.dot(inputs, W) + b
+            inputs=np.tanh(outputs)
         #inputs=relu(outputs);
         #inputs = sigmoid(outputs);
     return outputs 

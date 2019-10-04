@@ -80,12 +80,15 @@ def test_laplace_square():
 
     laplace2Dsquare=cdm.TwoVariablesOneUnknown_PDE_Solver(\
         domain=[[X,Y]],id="Laplace2D", plot_domain=[[X_plot, Y_plot]], \
-        local_path=LOCAL_PATH,var_ids=["x","y","u"])
+        local_path=LOCAL_PATH,var_ids=["x","y","T"])
 
     laplace2Dsquare.set_g_d(G_ansatz, D_ansatz, G_loss=None, D_loss=None, layer_sizes=[2,10,10,1], \
         create_G=None, create_D=None, max_fun_evals=200)
-    laplace2Dsquare.solve(lf.get_resid_Laplace_2D, [2,7,7,7,1], max_fun_evals=100, create_U=False)
+    laplace2Dsquare.solve(lf.get_resid_Laplace_2D, [2,7,7,7,1], max_fun_evals=100, create_U=True)
     laplace2Dsquare.plot_results()
+
+def test_neural_network_symbolic_derivative():
+    return 0
 def test():
     #test_diffusion_1D()
     #test_undamped_mass_spring_1D()
