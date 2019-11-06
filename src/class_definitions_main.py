@@ -10,7 +10,19 @@ mpl.rc('text', usetex=True)
 mpl.rcParams['font.size']=15;
 
 class SingleVariable_PDE_Solver():
-    def __init__(self, nx, L, get_resid,forcing_function_expr, fig_dir):
+    def __init__(self, nx, L, get_resid,forcing_function_expr, fig_dir, var_id, unknown_id):
+        """
+        Parameters
+        -----------------
+        nx: Number of collocation points in x direction
+        L: length of domain. x in [0,L]
+        get_resid: A function which returns a another function which is the residual of the PDE. 
+            Note: This "function to return a function" is needed to get residuals for different geometries (number of points, etc..)
+        fig_dir: Directory to save figures to. Should include the "/" at the end. 
+        var_id: Id for independent variable e.g. x, or t. Used to plot in graphs.
+        unknown_id: Id for unknown, e.g. u. 
+            NOTE: For ids do not include the latex $$. 
+        """
         self.L=L
         self.nx=nx
         self.G=None 
@@ -21,6 +33,8 @@ class SingleVariable_PDE_Solver():
         self.get_resid=get_resid
         self.resid=None
         self.forcing_function_expr=forcing_function_expr
+        self.var_id=var_id
+        self.unknown_id=unknown_id
     @staticmethod
     def initialize_net_fun_from_params(layer_sizes):
         return lambda params, x: optnn.neural_net_predict(np.array(x))
@@ -54,27 +68,31 @@ class SingleVariable_PDE_Solver():
         self.p_U=p_U
 
     def plot_save_results(self, id):
+        Phi=lambda x:(self.U(x)-self.G(x))/self.D(x)
         plt.figure()
         x=np.linspace(0,self.L,self.nx)
         
         u=np.zeros(x.shape)
         g=np.zeros(x.shape)
         d=np.zeros(x.shape)
+        phi=np.zeros(x.shape)
         for i,x_entry in enumerate(x):
             u[i]=self.U(x_entry)
             g[i]=self.G(x_entry)
             d[i]=self.D(x_entry)
-        plt.plot(x, u, label="$U(x)$")
-        plt.plot(x, g, label="$G(x)$")
-        plt.plot(x, d, label="$D(x)$")
-        plt.xlabel("$x$")
+            phi[i]=Phi(x_entry)
+        plt.plot(x, u, label="$U(%s)$" % self.var_id)
+        plt.plot(x, g, label="$G(%s)$" % self.var_id)
+        plt.plot(x, d, label="$D(%s)$" % self.var_id)
+        plt.plot(x, phi, label="$\Phi(%s)$" % self.var_id)
+        plt.xlabel("$%s$" % self.var_id)
         plt.legend()
         plt.savefig(self.fig_dir+id+"_ugd.eps")
         plt.show(block=True)
         vresid=np.vectorize(self.resid,excluded=[0])
         plt.figure()
         plt.plot(x, vresid(self.p_U,x), label="Residual")
-        plt.xlabel("$x$")
+        plt.xlabel("$%s$" % self.var_id)
         plt.legend()
         plt.savefig(self.fig_dir+id+"_resid.eps")
         plt.show(block=True)
@@ -99,7 +117,9 @@ class TwoVariablesOneUnknown_PDE_Solver():
         self.D=None 
         self.U=None
         self.resid=None
+        self.get_resid=None
         self.pstar_U=None
+        self.exact_solution=None
     def set_g_d(self, G_ansatz, D_ansatz, G_loss, D_loss, layer_sizes, max_fun_evals=200, create_G=True, create_D=True):
         p0=optnn.init_random_params(1, layer_sizes)
 
@@ -159,13 +179,21 @@ class TwoVariablesOneUnknown_PDE_Solver():
         ax.set_zlabel("$"+self.var_ids[2]+"$")
     def plot_results(self):
         fig=plt.figure()
-        ax = fig.add_subplot(221, projection='3d')
-        self.plot_quantity(ax, self.G, "G")
-        ax = fig.add_subplot(222, projection='3d')
-        self.plot_quantity(ax, self.D, "D")
+        if self.G is not None:
+            ax = fig.add_subplot(321, projection='3d')
+            self.plot_quantity(ax, self.G, "G")
+        if self.D is not None:
+            ax = fig.add_subplot(322, projection='3d')
+            self.plot_quantity(ax, self.D, "D")
         if self.U is not None:
-            ax = fig.add_subplot(223, projection='3d')
+            ax = fig.add_subplot(323, projection='3d')
             self.plot_quantity(ax, self.U, self.var_ids[2])
-            ax = fig.add_subplot(224, projection='3d')
+            ax = fig.add_subplot(324, projection='3d')
             self.plot_quantity(ax, lambda x,y: self.resid(self.pstar_U, x,y), "r")
+        if self.exact_solution is not None and self.get_resid is not None: 
+            resid=self.get_resid(self.exact_solution)
+            ax = fig.add_subplot(325, projection='3d')
+            self.plot_quantity(ax, lambda x,y: self.exact_solution(None, x,y), "u_{exact}")
+            ax = fig.add_subplot(326, projection='3d')
+            self.plot_quantity(ax, lambda x,y: resid(None, x,y), "r_{exact}")
         plt.show(block=True)

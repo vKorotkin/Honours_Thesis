@@ -21,25 +21,26 @@ def get_mass_spring_damper_residual(u, forcing_function):
 def test_diffusion_1D():
     forcing_function_expr='np.sin(x)'
     forcing_function_expr='0'
-    diff1D=cdm.SingleVariable_PDE_Solver(nx=10, L=1, get_resid=get_diffusion_residual, forcing_function_expr=forcing_function_expr, fig_dir=LOCAL_PATH+"figs/")
+    diff1D=cdm.SingleVariable_PDE_Solver(nx=10, L=1, get_resid=get_diffusion_residual, \
+        forcing_function_expr=forcing_function_expr, fig_dir=LOCAL_PATH+"figs/",var_id="x", unknown_id="u")
     diff1D.initialize_g_d_dirichlet(0,1)
     diff1D.solve(ls_phi=[1,10,1], max_feval=100)
     diff1D.plot_save_results("Diffusion1D")
 
 def test_undamped_mass_spring_1D():
     forcing_function_expr='0'
-    diff1D=cdm.SingleVariable_PDE_Solver(nx=10, L=2*np.pi, \
+    mass_spring1D=cdm.SingleVariable_PDE_Solver(nx=20, L=2*np.pi, \
         get_resid=get_mass_spring_damper_residual, \
-        forcing_function_expr=forcing_function_expr, fig_dir=LOCAL_PATH+"figs/")
-    diff1D.initialize_g_d_ode(1,0)
-    diff1D.solve(ls_phi=[1,10,10, 1], max_feval=200)
-    diff1D.plot_save_results("MassSpring1D_Undamped")
+        forcing_function_expr=forcing_function_expr, fig_dir=LOCAL_PATH+"figs/", var_id="t", unknown_id="u")
+    mass_spring1D.initialize_g_d_ode(1,0)
+    mass_spring1D.solve(ls_phi=[1,10,10, 1], max_feval=400)
+    mass_spring1D.plot_save_results("MassSpring1D_Undamped")
 
 def test_wave_1D():
     L=2*np.pi 
     t_max=3
     X, T=generate_square_domain(x_min=0., x_max=L, y_min=0., y_max=t_max, nx=5, ny=5)
-    X_plot, T_plot=generate_square_domain(x_min=0., x_max=L, y_min=0., y_max=t_max, nx=10, ny=10)
+    X_plot, T_plot=generate_square_domain(x_min=0., x_max=L, y_min=0., y_max=t_max, nx=30, ny=30)
 
     G_ansatz=lambda params, x,t: optnn.neural_net_predict(params, np.array([x,t]))
     D_ansatz=lambda params, x,t: x*(L-x)*t**2*optnn.neural_net_predict(params, np.array([x,t]))
@@ -50,11 +51,13 @@ def test_wave_1D():
     wave1D=cdm.TwoVariablesOneUnknown_PDE_Solver(\
         domain=[[X,T]],id="Wave1D", plot_domain=[[X_plot, T_plot]], \
         local_path=LOCAL_PATH,var_ids=["x","t","u"])
-
+    wave1D.exact_solution=lambda params,x,t: np.sin(x)*np.cos(t)
+    wave1D.get_resid=lf.get_resid_wave_eq_1D
     wave1D.set_g_d(G_ansatz, D_ansatz, G_loss=G_loss, D_loss=D_loss, layer_sizes=[2,10,10,1], \
         create_G=False, create_D=False, max_fun_evals=200)
     wave1D.solve(lf.get_resid_wave_eq_1D, [2,10,10,10,1], max_fun_evals=100, create_U=True)
     wave1D.plot_results()
+
 
 def test_laplace_2D_L_shape():
     #THIS DOESNT WORK FOR NOW. NEED LOSS FUNCTION FOR D. 
@@ -92,9 +95,9 @@ def test_neural_network_symbolic_derivative():
 def test():
     #test_diffusion_1D()
     #test_undamped_mass_spring_1D()
-    #test_wave_1D()
+    test_wave_1D()
     #test_laplace_2D_L_shape()
-    test_laplace_square()
+    #test_laplace_square()
     return 0
 
 if __name__ == "__main__":
