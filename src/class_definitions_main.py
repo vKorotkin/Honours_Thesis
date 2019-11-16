@@ -10,7 +10,7 @@ mpl.rc('text', usetex=True)
 mpl.rcParams['font.size']=15;
 
 class SingleVariable_PDE_Solver():
-    def __init__(self, nx, L, get_resid,forcing_function_expr, fig_dir, var_id, unknown_id):
+    def __init__(self, nx, L, get_resid,forcing_function_expr, fig_dir, var_id, unknown_id, id, local_path):
         """
         Parameters
         -----------------
@@ -35,6 +35,10 @@ class SingleVariable_PDE_Solver():
         self.forcing_function_expr=forcing_function_expr
         self.var_id=var_id
         self.unknown_id=unknown_id
+        self.data_file=local_path+"/data/trained_functions_"+id
+        self.id=id
+        self.local_path=local_path
+
     @staticmethod
     def initialize_net_fun_from_params(layer_sizes):
         return lambda params, x: optnn.neural_net_predict(np.array(x))
@@ -55,17 +59,23 @@ class SingleVariable_PDE_Solver():
             res_arr=vresid(params, x)
             return np.sum(res_arr)/(res_arr.shape[0])
         return loss_function
-    def solve(self, ls_phi, max_feval):
+    def solve(self, ls_phi, max_feval, create_U):
         Phi=lambda params, x: optnn.neural_net_predict(params, np.array(x))
         U=lambda params,x: self.G(x)+self.D(x)*Phi(params, x)
         x0=optnn.init_random_params(1,ls_phi)
         self.set_residual(U)
         loss_function=self.get_loss_function()
         loss_grad=grad(loss_function,0)
-        p_U, _=optnn.unflattened_lbfgs(loss_function, loss_grad, x0, \
-                max_feval=max_feval, max_iter=max_feval, callback=None)
-        self.U=lambda x: U(p_U, x)
-        self.p_U=p_U
+        if create_U:
+            p_U, _=optnn.unflattened_lbfgs(loss_function, loss_grad, x0, \
+                    max_feval=max_feval, max_iter=max_feval, callback=None)
+            self.U=lambda x: U(p_U, x)
+            self.p_U=p_U
+            save_var_to_file(self.U, self.id+"U", self.data_file)
+            save_var_to_file(self.p_U, self.id+"pstar_U", self.data_file)
+        else:
+            self.U=get_var_from_file(self.id+"U", self.data_file)
+            self.p_U=get_var_from_file(self.id+"pstar_U", self.data_file)
 
     def plot_save_results(self, id):
         Phi=lambda x:(self.U(x)-self.G(x))/self.D(x)
@@ -76,22 +86,33 @@ class SingleVariable_PDE_Solver():
         g=np.zeros(x.shape)
         d=np.zeros(x.shape)
         phi=np.zeros(x.shape)
-        for i,x_entry in enumerate(x):
-            u[i]=self.U(x_entry)
-            g[i]=self.G(x_entry)
-            d[i]=self.D(x_entry)
-            phi[i]=Phi(x_entry)
-        plt.plot(x, u, label="$U(%s)$" % self.var_id)
-        plt.plot(x, g, label="$G(%s)$" % self.var_id)
-        plt.plot(x, d, label="$D(%s)$" % self.var_id)
-        plt.plot(x, phi, label="$\Phi(%s)$" % self.var_id)
+        for i,x_i in enumerate(x):
+            u[i]=self.U(x_i)
+            g[i]=self.G(x_i)
+            d[i]=self.D(x_i)
+            phi[i]=Phi(x_i)
+        # PLOT COMPONENTS: G,D, Phi
+        plt.plot(x, g, label="$G(%s)$" % self.var_id, color='g')
+        plt.plot(x, d, label="$D(%s)$" % self.var_id, color='tab:olive')
+        plt.plot(x, phi, label="$\Phi(%s)$" % self.var_id, color='r')
         plt.xlabel("$%s$" % self.var_id)
         plt.legend()
         plt.savefig(self.fig_dir+id+"_ugd.eps")
-        plt.show(block=True)
+        #plt.show(block=True)
+        # PLOT U, the solution
+        plt.figure()
+        plt.plot(x, u, label="$U(%s)$" % self.var_id, color='k')
+        plt.xlabel("$%s$" % self.var_id)
+        #plt.ylabel("$U(%s)$" % self.var_id)
+        plt.legend()
+        plt.savefig(self.fig_dir+id+"_u.eps")
+        #plt.show(block=True)
+        #PLOT RESIDUAL
         vresid=np.vectorize(self.resid,excluded=[0])
         plt.figure()
-        plt.plot(x, vresid(self.p_U,x), label="Residual")
+        
+        plt.plot(x, vresid(self.p_U,x),label="$R(%s)$" % self.var_id)
+        plt.ylabel("$R(%s)$" % self.var_id)
         plt.xlabel("$%s$" % self.var_id)
         plt.legend()
         plt.savefig(self.fig_dir+id+"_resid.eps")
@@ -112,6 +133,7 @@ class TwoVariablesOneUnknown_PDE_Solver():
         self.local_path=local_path
         self.data_file=local_path+"/data/trained_functions_"+id
         self.var_ids=var_ids
+        self.fig_dir=local_path+"figs/"
         self.id=id
         self.G=None
         self.D=None 
@@ -156,11 +178,21 @@ class TwoVariablesOneUnknown_PDE_Solver():
                 sum = sum + np.sum(res_arr)/(res_arr.shape[0]*res_arr.shape[1])
             return sum
         return loss_function
-    def solve(self, get_resid, layer_sizes, max_fun_evals, create_U=True):
-        U=lambda params,x,y:self.G(x,y)+self.D(x,y)*optnn.neural_net_predict(params,np.array([x,y]).reshape(1,2))
+    def solve(self, get_resid, layer_sizes, max_fun_evals, create_U=True, neural_net_basis=True, U_ansatz_if_not_neural=None, x0=None):
+        """
+        Optimizes the solution ansatz U to minimize the local equation defined by get_resid. 
+        The boundary and initial conditions are assumed to already have been fit by self.G and self.D
+        By default, a neural network basis is used i.e. neural_net_basis=True. 
+        If a different basis is used, U_ansatz_if_not_neural and x0 need to be given. 
+        """
+        if neural_net_basis:
+            U=lambda params,x,y:self.G(x,y)+self.D(x,y)*optnn.neural_net_predict(params,np.array([x,y]).reshape(1,2))
+            x0=optnn.init_random_params(1, layer_sizes) 
+        else:
+            U=U_ansatz_if_not_neural
+
         resid=get_resid(U)
         if create_U:
-            x0=optnn.init_random_params(1, layer_sizes)    
             self.U, self.pstar_U=self.optimize_func(U, x0, self.get_local_eq_loss_function(resid), max_fun_evals)
             save_var_to_file(self.U, self.id+"U", self.data_file)
             save_var_to_file(self.pstar_U, self.id+"pstar_U", self.data_file)
@@ -173,27 +205,32 @@ class TwoVariablesOneUnknown_PDE_Solver():
     def plot_quantity(self, ax, quantity_fun, fun_id):
         plot_2D_function_general_domain(ax, self.plot_domain, quantity_fun, "$%s$" % fun_id)
         #plt.title("%s: $G(%s, %s)$" % (self.id, self.var_ids[0], self.var_ids[1]))
-        plt.title("%s: $%s(%s,%s)$" % (self.id, fun_id, self.var_ids[0], self.var_ids[1]))
+        plt.title("$%s(%s,%s)$" % (fun_id, self.var_ids[0], self.var_ids[1]))
         plt.xlabel("$"+self.var_ids[0]+"$")
         plt.ylabel("$"+self.var_ids[1]+"$")
         ax.set_zlabel("$"+self.var_ids[2]+"$")
     def plot_results(self):
+        num_rows=2
+        if self.exact_solution is not None and self.get_resid is not None:
+            num_rows=3
         fig=plt.figure()
         if self.G is not None:
-            ax = fig.add_subplot(321, projection='3d')
+            ax = fig.add_subplot(num_rows*100+21, projection='3d')
             self.plot_quantity(ax, self.G, "G")
         if self.D is not None:
-            ax = fig.add_subplot(322, projection='3d')
+            ax = fig.add_subplot(num_rows*100+22, projection='3d')
             self.plot_quantity(ax, self.D, "D")
         if self.U is not None:
-            ax = fig.add_subplot(323, projection='3d')
+            #self.resid=self.get_resid(self.U)
+            ax = fig.add_subplot(num_rows*100+23, projection='3d')
             self.plot_quantity(ax, self.U, self.var_ids[2])
-            ax = fig.add_subplot(324, projection='3d')
+            ax = fig.add_subplot(num_rows*100+24, projection='3d')
             self.plot_quantity(ax, lambda x,y: self.resid(self.pstar_U, x,y), "r")
         if self.exact_solution is not None and self.get_resid is not None: 
             resid=self.get_resid(self.exact_solution)
-            ax = fig.add_subplot(325, projection='3d')
+            ax = fig.add_subplot(num_rows*100+25, projection='3d')
             self.plot_quantity(ax, lambda x,y: self.exact_solution(None, x,y), "u_{exact}")
-            ax = fig.add_subplot(326, projection='3d')
+            ax = fig.add_subplot(num_rows*100+26, projection='3d')
             self.plot_quantity(ax, lambda x,y: resid(None, x,y), "r_{exact}")
+        plt.savefig(self.fig_dir+self.id+"_ugd.eps")
         plt.show(block=True)
